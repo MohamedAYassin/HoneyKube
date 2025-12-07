@@ -107,8 +107,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT:-6379}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    volumes:
-      - ./config/fingerprints/apache.yaml:/config/fingerprint.yaml:ro
+      - FINGERPRINT_PATH=/config/fingerprints/apache.yaml
     depends_on:
       - redis
       - scanner-detector
@@ -133,8 +132,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT:-6379}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    volumes:
-      - ./config/fingerprints/wordpress.yaml:/config/fingerprint.yaml:ro
+      - FINGERPRINT_PATH=/config/fingerprints/wordpress.yaml
     depends_on:
       - redis
       - scanner-detector
@@ -160,8 +158,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT:-6379}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    volumes:
-      - ./config/fingerprints/nextjs.yaml:/config/fingerprint.yaml:ro
+      - FINGERPRINT_PATH=/config/fingerprints/nextjs.yaml
     depends_on:
       - redis
       - scanner-detector

@@ -18,9 +18,12 @@ COPY shared /app/shared
 # Copy application code
 COPY services/port-listener/main.py .
 
+# Copy all fingerprint configs
+COPY config/fingerprints /config/fingerprints
+
 # Create non-root user
 RUN useradd -r -s /bin/false honeypot && \
-    chown -R honeypot:honeypot /app
+    chown -R honeypot:honeypot /app /config
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1 \
