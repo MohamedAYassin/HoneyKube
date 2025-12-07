@@ -1,0 +1,122 @@
+---
+# Artifact Sink PersistentVolumeClaims
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: honeykube-logs
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: artifact-sink
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: honeykube-artifacts
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: artifact-sink
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+---
+# Artifact Sink Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: artifact-sink
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: artifact-sink
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: artifact-sink
+  template:
+    metadata:
+      labels:
+        app: artifact-sink
+        app.kubernetes.io/name: honeykube
+        app.kubernetes.io/component: artifact-sink
+    spec:
+      containers:
+        - name: artifact-sink
+          image: honeykube/artifact-sink:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8083
+              name: http
+          env:
+            - name: LISTEN_PORT
+              value: "8083"
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: LOG_DIR
+              value: "/logs"
+            - name: ARTIFACT_DIR
+              value: "/artifacts"
+            - name: LOG_LEVEL
+              value: "INFO"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: logs
+              mountPath: /logs
+            - name: artifacts
+              mountPath: /artifacts
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: 8083
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: 8083
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: logs
+          persistentVolumeClaim:
+            claimName: honeykube-logs
+        - name: artifacts
+          persistentVolumeClaim:
+            claimName: honeykube-artifacts
+---
+# Artifact Sink Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: artifact-sink
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: artifact-sink
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8083
+      targetPort: 8083
+      name: http
+  selector:
+    app: artifact-sink

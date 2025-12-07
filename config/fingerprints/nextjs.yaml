@@ -1,0 +1,249 @@
+# Vulnerable Next.js/React Application Fingerprint
+# CVE-2025-55182 & CVE-2025-66478 - React Server Components RCE
+name: nextjs-vulnerable
+port: 3000
+protocol: http
+server_header: "Next.js"
+version: "14.1.0"
+os_hint: "Linux (Node.js 20.x)"
+banner: |
+  Next.js 14.1.0
+  React 18.2.0
+  Node.js 20.10.0
+
+vuln_tags:
+  - rce
+  - react_server_components
+  - prototype_pollution
+  - CVE-2025-55182
+  - CVE-2025-66478
+  - nextjs_rce
+  - server_actions
+  - deserialization
+
+behavior_hints:
+  - "Accept Server Actions via POST with Next-Action header"
+  - "Process multipart form data for RSC payloads"
+  - "Return X-Action-Redirect header on successful actions"
+  - "Show detailed error messages with digest in response"
+  - "Expose _next/static paths with build manifests"
+  - "Return 500 with E{digest} format on malformed RSC requests"
+  - "Process __proto__ in deserialized objects"
+  - "Allow prototype chain manipulation in form data"
+
+default_responses:
+  "/":
+    status: 200
+    headers:
+      Content-Type: "text/html; charset=utf-8"
+      X-Powered-By: "Next.js"
+      Cache-Control: "private, no-cache, no-store, max-age=0, must-revalidate"
+    body: |
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>My Next.js App</title>
+      <meta name="next-head-count" content="4">
+      <link rel="preload" href="/_next/static/chunks/main.js" as="script">
+      <link rel="preload" href="/_next/static/chunks/pages/_app.js" as="script">
+      </head>
+      <body>
+      <div id="__next">
+      <main class="container">
+      <h1>Welcome to Next.js!</h1>
+      <p>Get started by editing pages/index.js</p>
+      <p>Powered by Next.js and React</p>
+      </main>
+      </div>
+      <script src="/_next/static/chunks/main.js" defer></script>
+      <script src="/_next/static/chunks/pages/_app.js" defer></script>
+      <!-- Build ID: a1b2c3d4e5f6 -->
+      </body>
+      </html>
+
+  "/_next/static":
+    status: 200
+    headers:
+      Content-Type: "text/html; charset=utf-8"
+    body: |
+      <!DOCTYPE html>
+      <html><head><title>Index of /_next/static</title></head>
+      <body>
+      <h1>Index of /_next/static</h1>
+      <ul>
+      <li><a href="chunks/">chunks/</a></li>
+      <li><a href="css/">css/</a></li>
+      <li><a href="media/">media/</a></li>
+      </ul>
+      </body></html>
+
+  "/_next/static/chunks/main.js":
+    status: 200
+    headers:
+      Content-Type: "application/javascript; charset=utf-8"
+      Cache-Control: "public, max-age=31536000, immutable"
+    body: |
+      (self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[888],{/* Next.js runtime */}]);
+
+  "/api/health":
+    status: 200
+    headers:
+      Content-Type: "application/json"
+    body: |
+      {"status":"ok","version":"14.1.0","uptime":12345}
+
+  "/.env":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      # Next.js Environment Configuration
+      NEXT_PUBLIC_API_URL=https://api.internal.company.com
+      NEXT_PUBLIC_SITE_URL=https://app.company.com
+      
+      # Database (Prisma)
+      DATABASE_URL="postgresql://admin:DbP@ssw0rd_2024@db.company.internal:5432/nextjs_prod?schema=public"
+      
+      # NextAuth.js
+      NEXTAUTH_URL=https://app.company.com
+      NEXTAUTH_SECRET=super_secret_nextauth_key_abc123xyz
+      
+      # OAuth Providers
+      GOOGLE_CLIENT_ID=123456789-abcdefgh.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET=GOCSPX-abc123def456ghi789
+      GITHUB_ID=Iv1.abc123def456
+      GITHUB_SECRET=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      
+      # API Keys
+      OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
+      STRIPE_SECRET_KEY=sk_live_51ABC123XYZ
+      STRIPE_WEBHOOK_SECRET=whsec_abc123def456
+      
+      # AWS
+      AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+      AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      AWS_S3_BUCKET=company-nextjs-uploads
+      
+      # Redis
+      REDIS_URL=redis://:redis_password_123@redis.internal:6379
+
+  "/.env.local":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      # Local Development Overrides
+      DATABASE_URL="postgresql://dev:devpassword@localhost:5432/nextjs_dev"
+      NEXTAUTH_SECRET=dev_secret_key
+      DEBUG=true
+
+  "/.env.production":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      # Production Environment
+      NODE_ENV=production
+      DATABASE_URL="postgresql://prod_user:Pr0dP@ss!@prod-db.company.com:5432/nextjs_prod"
+      NEXTAUTH_SECRET=prod_super_secret_key_xyz789
+
+  "/.git/config":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      [core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+      [remote "origin"]
+        url = git@github.com:company/nextjs-webapp.git
+        fetch = +refs/heads/*:refs/remotes/origin/*
+
+  "/api/debug":
+    status: 200
+    headers:
+      Content-Type: "application/json"
+    body: |
+      {"env":{"NODE_ENV":"production","DATABASE_URL":"postgresql://admin:DbP@ssw0rd_2024@db.company.internal:5432/nextjs_prod","NEXTAUTH_SECRET":"super_secret..."},"version":"14.1.0","pid":12345}
+
+  "/api/config":
+    status: 200
+    headers:
+      Content-Type: "application/json"
+    body: |
+      {"database":{"host":"db.company.internal","port":5432,"user":"admin"},"redis":{"host":"redis.internal","port":6379},"features":{"debug":true,"adminPanel":true}}
+
+  "/.next/BUILD_ID":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: "a1b2c3d4e5f6g7h8i9j0"
+
+  "/.next/build-manifest.json":
+    status: 200
+    headers:
+      Content-Type: "application/json"
+    body: |
+      {"polyfillFiles":["static/chunks/polyfills.js"],"devFiles":[],"ampDevFiles":[],"lowPriorityFiles":["static/chunks/pages/_app.js"],"rootMainFiles":["static/chunks/main.js"],"pages":{"/":["static/chunks/pages/index.js"],"/admin":["static/chunks/pages/admin.js"]}}
+
+  "/next.config.js":
+    status: 200
+    headers:
+      Content-Type: "application/javascript"
+    body: |
+      /** @type {import('next').NextConfig} */
+      module.exports = {
+        env: {
+          API_SECRET: 'hardcoded_api_secret_123',
+          ADMIN_PASSWORD: 'admin123',
+        },
+        images: { domains: ['cdn.company.com'] },
+      }
+
+  "/package.json":
+    status: 200
+    headers:
+      Content-Type: "application/json"
+    body: |
+      {"name":"nextjs-app","version":"1.0.0","scripts":{"dev":"next dev","build":"next build"},"dependencies":{"next":"14.1.0","react":"18.2.0","prisma":"5.0.0"}}
+
+  "/login":
+    status: 200
+    headers:
+      Content-Type: "text/html; charset=utf-8"
+      X-Powered-By: "Next.js"
+    body: |
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+      <meta charset="utf-8">
+      <title>Login - My Next.js App</title>
+      </head>
+      <body>
+      <div id="__next">
+      <form action="/api/auth/login" method="POST">
+      <input type="text" name="username" placeholder="Username">
+      <input type="password" name="password" placeholder="Password">
+      <button type="submit">Sign In</button>
+      </form>
+      </div>
+      </body>
+      </html>
+
+  "/_next/data/build-id/index.json":
+    status: 200
+    headers:
+      Content-Type: "application/json"
+      Cache-Control: "s-maxage=1, stale-while-revalidate"
+    body: |
+      {"pageProps":{"user":null},"__N_SSP":true}
+
+  "/manifest.json":
+    status: 200
+    headers:
+      Content-Type: "application/manifest+json"
+    body: |
+      {"name":"Next.js App","short_name":"NextApp","start_url":"/","display":"standalone","background_color":"#ffffff","theme_color":"#000000"}

@@ -1,0 +1,4 @@
+aiohttp>=3.9.0
+aiofiles>=23.2.0
+pydantic>=2.5.0
+redis>=5.0.0

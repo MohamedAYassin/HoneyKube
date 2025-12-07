@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: honeypot

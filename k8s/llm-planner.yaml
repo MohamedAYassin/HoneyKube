@@ -1,0 +1,106 @@
+---
+# LLM Planner Deployment (OpenRouter)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-planner
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: llm-planner
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: llm-planner
+  template:
+    metadata:
+      labels:
+        app: llm-planner
+        app.kubernetes.io/name: honeykube
+        app.kubernetes.io/component: llm-planner
+    spec:
+      containers:
+        - name: llm-planner
+          image: honeykube/llm-planner:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8082
+              name: http
+          env:
+            - name: LISTEN_PORT
+              value: "8082"
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llm-config
+                  key: OPENROUTER_API_KEY
+            - name: OPENROUTER_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: llm-config
+                  key: OPENROUTER_BASE_URL
+                  optional: true
+            - name: LLM_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: llm-config
+                  key: LLM_MODEL
+                  optional: true
+            - name: LLM_TEMPERATURE
+              valueFrom:
+                configMapKeyRef:
+                  name: llm-config
+                  key: LLM_TEMPERATURE
+                  optional: true
+            - name: LLM_MAX_TOKENS
+              valueFrom:
+                configMapKeyRef:
+                  name: llm-config
+                  key: LLM_MAX_TOKENS
+                  optional: true
+            - name: REQUEST_TIMEOUT
+              value: "30"
+            - name: MAX_RETRIES
+              value: "3"
+            - name: LOG_LEVEL
+              value: "INFO"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: 8082
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: 8082
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+---
+# LLM Planner Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-planner
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: llm-planner
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8082
+      targetPort: 8082
+      name: http
+  selector:
+    app: llm-planner

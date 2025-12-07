@@ -1,0 +1,71 @@
+---
+# Scanner Detector Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scanner-detector
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: scanner-detector
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: scanner-detector
+  template:
+    metadata:
+      labels:
+        app: scanner-detector
+        app.kubernetes.io/name: honeykube
+        app.kubernetes.io/component: scanner-detector
+    spec:
+      containers:
+        - name: scanner-detector
+          image: honeykube/scanner-detector:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+            - name: LISTEN_PORT
+              value: "8081"
+            - name: LOG_LEVEL
+              value: "INFO"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+# Scanner Detector Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: scanner-detector
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: scanner-detector
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8081
+      targetPort: 8081
+      name: http
+  selector:
+    app: scanner-detector

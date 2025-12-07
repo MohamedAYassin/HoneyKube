@@ -1,0 +1,178 @@
+services:
+  # Redis for session storage
+  redis:
+    image: redis:7-alpine
+    container_name: honeykube-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Scanner Detector Service
+  scanner-detector:
+    build:
+      context: .
+      dockerfile: services/scanner-detector/Dockerfile
+    container_name: honeykube-scanner-detector
+    restart: unless-stopped
+    ports:
+      - "${SCANNER_DETECTOR_PORT:-8081}:8081"
+    environment:
+      - LISTEN_PORT=8081
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/_health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # LLM Planner Service (OpenRouter)
+  llm-planner:
+    build:
+      context: .
+      dockerfile: services/llm-planner/Dockerfile
+    container_name: honeykube-llm-planner
+    restart: unless-stopped
+    ports:
+      - "${LLM_PLANNER_PORT:-8082}:8082"
+    environment:
+      - LISTEN_PORT=8082
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_BASE_URL=${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      - LLM_MODEL=${LLM_MODEL:-google/gemini-2.0-flash-001}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.7}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-4096}
+      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-30}
+      - MAX_RETRIES=${MAX_RETRIES:-3}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Artifact Sink Service
+  artifact-sink:
+    build:
+      context: .
+      dockerfile: services/artifact-sink/Dockerfile
+    container_name: honeykube-artifact-sink
+    restart: unless-stopped
+    ports:
+      - "${ARTIFACT_SINK_PORT:-8083}:8083"
+    environment:
+      - LISTEN_PORT=8083
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - LOG_DIR=/logs
+      - ARTIFACT_DIR=/artifacts
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - logs-data:/logs
+      - artifacts-data:/artifacts
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/_health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Port Listener - Apache Profile (Port 80)
+  port-listener-apache:
+    build:
+      context: .
+      dockerfile: services/port-listener/Dockerfile
+    container_name: honeykube-apache-80
+    restart: unless-stopped
+    ports:
+      - "${APACHE_PORT:-8080}:8080"
+    environment:
+      - LISTEN_PORT=8080
+      - FINGERPRINT_PATH=/config/fingerprint.yaml
+      - SCANNER_DETECTOR_URL=http://scanner-detector:8081
+      - LLM_PLANNER_URL=http://llm-planner:8082
+      - ARTIFACT_SINK_URL=http://artifact-sink:8083
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config/fingerprints/apache.yaml:/config/fingerprint.yaml:ro
+    depends_on:
+      - redis
+      - scanner-detector
+      - llm-planner
+      - artifact-sink
+
+  # Port Listener - WordPress Profile (Port 8000)
+  port-listener-wordpress:
+    build:
+      context: .
+      dockerfile: services/port-listener/Dockerfile
+    container_name: honeykube-wordpress-8000
+    restart: unless-stopped
+    ports:
+      - "${WORDPRESS_PORT:-8000}:8000"
+    environment:
+      - LISTEN_PORT=8000
+      - FINGERPRINT_PATH=/config/fingerprint.yaml
+      - SCANNER_DETECTOR_URL=http://scanner-detector:8081
+      - LLM_PLANNER_URL=http://llm-planner:8082
+      - ARTIFACT_SINK_URL=http://artifact-sink:8083
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config/fingerprints/wordpress.yaml:/config/fingerprint.yaml:ro
+    depends_on:
+      - redis
+      - scanner-detector
+      - llm-planner
+      - artifact-sink
+
+  # Port Listener - Next.js Vulnerable Profile (Port 3000)
+  # CVE-2025-55182 & CVE-2025-66478 - React Server Components RCE
+  port-listener-nextjs:
+    build:
+      context: .
+      dockerfile: services/port-listener/Dockerfile
+    container_name: honeykube-nextjs-3000
+    restart: unless-stopped
+    ports:
+      - "${NEXTJS_PORT:-3000}:3000"
+    environment:
+      - LISTEN_PORT=3000
+      - FINGERPRINT_PATH=/config/fingerprint.yaml
+      - SCANNER_DETECTOR_URL=http://scanner-detector:8081
+      - LLM_PLANNER_URL=http://llm-planner:8082
+      - ARTIFACT_SINK_URL=http://artifact-sink:8083
+      - REDIS_HOST=redis
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./config/fingerprints/nextjs.yaml:/config/fingerprint.yaml:ro
+    depends_on:
+      - redis
+      - scanner-detector
+      - llm-planner
+      - artifact-sink
+
+volumes:
+  redis-data:
+  logs-data:
+  artifacts-data:
+
+networks:
+  default:
+    name: honeykube-network

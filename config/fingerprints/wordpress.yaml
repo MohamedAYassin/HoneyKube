@@ -1,0 +1,261 @@
+# WordPress Vulnerable Installation Fingerprint
+name: wordpress-vulnerable
+port: 8000
+protocol: http
+server_header: "Apache/2.4.29 (Ubuntu)"
+version: "5.4.2"
+os_hint: "Ubuntu 18.04 LTS"
+banner: |
+  WordPress 5.4.2
+  PHP/7.2.24
+  MySQL 5.7.31
+
+vuln_tags:
+  - wordpress_xmlrpc
+  - wordpress_enum
+  - plugin_vulnerability
+  - theme_vulnerability
+  - sql_injection
+  - file_upload
+  - authentication_bypass
+  - privilege_escalation
+
+behavior_hints:
+  - "Allow user enumeration via /?author=1"
+  - "Expose wp-config.php.bak if traversal attempted"
+  - "Show WordPress version in generator meta tag"
+  - "Enable XML-RPC pingback"
+  - "Allow plugin file editing"
+  - "Show database errors on malformed queries"
+  - "Accept default admin credentials (admin:admin123)"
+  - "Expose debug.log at /wp-content/debug.log"
+
+default_responses:
+  "/":
+    status: 200
+    headers:
+      Content-Type: "text/html; charset=UTF-8"
+      X-Powered-By: "PHP/7.2.24"
+    body: |
+      <!DOCTYPE html>
+      <html lang="en-US">
+      <head>
+      <meta charset="UTF-8">
+      <meta name="generator" content="WordPress 5.4.2">
+      <title>My WordPress Site</title>
+      <link rel="stylesheet" href="/wp-content/themes/flavor/style.css">
+      </head>
+      <body>
+      <h1>Welcome to My Blog</h1>
+      <p>This is a sample WordPress installation.</p>
+      <!-- Debug: Query time 0.0023s, Memory 4.2MB -->
+      </body>
+      </html>
+  
+  "/wp-login.php":
+    status: 200
+    headers:
+      Content-Type: "text/html; charset=UTF-8"
+    body: |
+      <!DOCTYPE html>
+      <html lang="en-US">
+      <head>
+      <title>Log In ‹ My WordPress Site</title>
+      </head>
+      <body class="login">
+      <div id="login">
+      <h1><a href="/">My WordPress Site</a></h1>
+      <form name="loginform" id="loginform" action="/wp-login.php" method="post">
+      <label for="user_login">Username</label>
+      <input type="text" name="log" id="user_login">
+      <label for="user_pass">Password</label>
+      <input type="password" name="pwd" id="user_pass">
+      <input type="submit" value="Log In">
+      </form>
+      </div>
+      </body>
+      </html>
+  
+  "/xmlrpc.php":
+    status: 200
+    headers:
+      Content-Type: "text/xml; charset=UTF-8"
+    body: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <methodResponse>
+        <params>
+          <param>
+            <value><string>XML-RPC server accepts POST requests only.</string></value>
+          </param>
+        </params>
+      </methodResponse>
+  
+  "/wp-json/wp/v2/users":
+    status: 200
+    headers:
+      Content-Type: "application/json"
+    body: |
+      [{"id":1,"name":"admin","url":"","description":"Site Administrator","link":"/author/admin/","slug":"admin","avatar_urls":{"24":"//gravatar.com/avatar/?d=mm","48":"//gravatar.com/avatar/?d=mm","96":"//gravatar.com/avatar/?d=mm"}},{"id":2,"name":"editor","url":"","description":"","link":"/author/editor/","slug":"editor"}]
+  
+  "/.env":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      # WordPress Environment Configuration
+      WP_ENV=production
+      WP_DEBUG=true
+      WP_DEBUG_LOG=true
+      
+      # Database
+      DB_NAME=wordpress_prod
+      DB_USER=wp_admin
+      DB_PASSWORD=WpDb_Pr0d_P@ss!
+      DB_HOST=localhost
+      DB_PREFIX=wp_
+      
+      # Authentication Keys (from api.wordpress.org)
+      AUTH_KEY='put your unique phrase here xyz123'
+      SECURE_AUTH_KEY='another unique phrase abc789'
+      LOGGED_IN_KEY='logged in key here'
+      NONCE_KEY='nonce key value'
+      AUTH_SALT='auth salt here'
+      
+      # SMTP
+      SMTP_HOST=smtp.gmail.com
+      SMTP_USER=wordpress@company.com
+      SMTP_PASSWORD=app_password_12345
+      
+      # API Keys
+      AKISMET_API_KEY=abc123xyz789
+      GOOGLE_MAPS_KEY=AIzaSyB-abc123def456
+
+  "/wp-config.php.bak":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      <?php
+      // ** MySQL settings - You can get this info from your web host ** //
+      define( 'DB_NAME', 'wordpress_prod' );
+      define( 'DB_USER', 'wp_admin' );
+      define( 'DB_PASSWORD', 'WpDb_Pr0d_P@ss!' );
+      define( 'DB_HOST', 'localhost' );
+      define( 'DB_CHARSET', 'utf8mb4' );
+      define( 'DB_COLLATE', '' );
+      
+      // Authentication Keys and Salts
+      define( 'AUTH_KEY',         'xK9#mP$2vL8@nQ5!' );
+      define( 'SECURE_AUTH_KEY',  'aB3$cD4%eF5^gH6&' );
+      define( 'LOGGED_IN_KEY',    'iJ7*kL8(mN9)oP0_' );
+      
+      $table_prefix = 'wp_';
+      define( 'WP_DEBUG', true );
+      define( 'WP_DEBUG_LOG', true );
+
+  "/wp-config.php~":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      <?php
+      define('DB_PASSWORD', 'OldP@ssword_2023');
+
+  "/.git/config":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      [core]
+        repositoryformatversion = 0
+        filemode = true
+      [remote "origin"]
+        url = git@github.com:company/wordpress-site.git
+        fetch = +refs/heads/*:refs/remotes/origin/*
+
+  "/backup/wordpress-db.sql":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      -- WordPress Database Backup
+      -- Database: wordpress_prod
+      -- Date: 2025-12-01 10:00:00
+      
+      CREATE TABLE `wp_users` (
+        `ID` bigint(20) UNSIGNED NOT NULL,
+        `user_login` varchar(60) NOT NULL,
+        `user_pass` varchar(255) NOT NULL,
+        `user_email` varchar(100) NOT NULL
+      );
+      
+      INSERT INTO `wp_users` VALUES
+      (1, 'admin', '$P$Babc123xyz789...', 'admin@company.com'),
+      (2, 'editor', '$P$Bdef456uvw012...', 'editor@company.com');
+      
+      CREATE TABLE `wp_options` (
+        `option_name` varchar(191) NOT NULL,
+        `option_value` longtext NOT NULL
+      );
+      
+      INSERT INTO `wp_options` VALUES
+      ('admin_email', 'admin@company.com'),
+      ('mailserver_pass', 'smtp_password_123');
+
+  "/readme.html":
+    status: 200
+    headers:
+      Content-Type: "text/html"
+    body: |
+      <!DOCTYPE html>
+      <html>
+      <head><title>WordPress &rsaquo; ReadMe</title></head>
+      <body>
+      <h1>WordPress</h1>
+      <p>Version 5.4.2</p>
+      <p>Semantic Personal Publishing Platform</p>
+      </body>
+      </html>
+
+  "/wp-admin/install.php":
+    status: 200
+    headers:
+      Content-Type: "text/html"
+    body: |
+      <!DOCTYPE html>
+      <html>
+      <head><title>WordPress Installation</title></head>
+      <body>
+      <h1>Already Installed</h1>
+      <p>You appear to have already installed WordPress. To reinstall please clear your old database tables first.</p>
+      <p class="step"><a href="/wp-admin/">Log In</a></p>
+      </body>
+      </html>
+
+  "/wp-content/uploads/":
+    status: 200
+    headers:
+      Content-Type: "text/html"
+    body: |
+      <!DOCTYPE html>
+      <html><head><title>Index of /wp-content/uploads</title></head>
+      <body>
+      <h1>Index of /wp-content/uploads</h1>
+      <ul>
+      <li><a href="2024/">2024/</a></li>
+      <li><a href="2025/">2025/</a></li>
+      <li><a href="backup.zip">backup.zip</a> 45MB</li>
+      </ul>
+      </body></html>
+
+  "/wp-content/debug.log":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      [06-Dec-2025 10:23:45 UTC] PHP Notice: Undefined variable: user_id in /var/www/html/wp-content/plugins/vulnerable-plugin/main.php on line 42
+      [06-Dec-2025 10:23:45 UTC] WordPress database error: [You have an error in your SQL syntax]
+      SELECT * FROM wp_users WHERE user_login = 'admin'
+      [06-Dec-2025 10:24:12 UTC] PHP Warning: include(/var/www/html/wp-content/themes/flavor/../../../wp-config.php): failed to open stream in /var/www/html/wp-includes/template.php on line 716
+      [06-Dec-2025 10:25:00 UTC] PHP Fatal error: Uncaught Error: Call to undefined function mysql_connect()
+      [06-Dec-2025 10:25:30 UTC] WordPress database error: Table 'wordpress_prod.wp_users' doesn't exist

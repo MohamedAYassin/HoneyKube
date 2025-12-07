@@ -1,0 +1,234 @@
+# Apache/PHP Vulnerable Server Fingerprint
+name: apache-php-vulnerable
+port: 8080
+protocol: http
+server_header: "Apache/2.4.41 (Ubuntu)"
+version: "2.4.41"
+os_hint: "Ubuntu 20.04 LTS"
+banner: |
+  Apache/2.4.41 (Ubuntu) Server
+  PHP/7.4.3
+  OpenSSL/1.1.1f
+
+vuln_tags:
+  - sql_injection
+  - command_injection
+  - path_traversal
+  - file_upload
+  - lfi
+  - information_disclosure
+
+behavior_hints:
+  - "Display verbose PHP errors with file paths"
+  - "Show MySQL connection errors with credentials"
+  - "Allow directory listing on /uploads/"
+  - "Reflect user input in error messages"
+  - "Accept weak session cookies"
+  - "Expose .git directory"
+  - "Show phpinfo() at /info.php"
+
+default_responses:
+  "/":
+    status: 200
+    headers:
+      Content-Type: "text/html; charset=UTF-8"
+    body: |
+      <!DOCTYPE html>
+      <html>
+      <head><title>Welcome to Apache</title></head>
+      <body>
+      <h1>It works!</h1>
+      <p>Apache/2.4.41 (Ubuntu) Server at localhost</p>
+      </body>
+      </html>
+  
+  "/robots.txt":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      User-agent: *
+      Disallow: /admin/
+      Disallow: /backup/
+      Disallow: /config/
+      Disallow: /uploads/private/
+  
+  "/.env":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      # Application Configuration
+      APP_NAME=MyWebApp
+      APP_ENV=production
+      APP_DEBUG=true
+      APP_URL=http://localhost
+      
+      # Database
+      DB_CONNECTION=mysql
+      DB_HOST=127.0.0.1
+      DB_PORT=3306
+      DB_DATABASE=webapp_prod
+      DB_USERNAME=webapp_user
+      DB_PASSWORD=Pr0d_P@ssw0rd_2024!
+      
+      # Redis
+      REDIS_HOST=127.0.0.1
+      REDIS_PASSWORD=redis_secret_123
+      REDIS_PORT=6379
+      
+      # AWS Credentials
+      AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+      AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      AWS_DEFAULT_REGION=us-east-1
+      AWS_BUCKET=company-uploads
+      
+      # Mail
+      MAIL_MAILER=smtp
+      MAIL_HOST=smtp.mailgun.org
+      MAIL_PORT=587
+      MAIL_USERNAME=postmaster@mg.example.com
+      MAIL_PASSWORD=mail_api_key_12345
+      
+      # API Keys
+      STRIPE_KEY=sk_live_51ABC123DEF456
+      OPENAI_API_KEY=sk-proj-abc123def456
+      JWT_SECRET=super_secret_jwt_key_dont_share
+
+  "/.env.backup":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      # Old Configuration Backup
+      DB_PASSWORD=OldP@ssword_2023
+      AWS_SECRET_ACCESS_KEY=OldAwsKey12345EXAMPLE
+      ADMIN_PASSWORD=admin123
+
+  "/.git/config":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      [core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+      [remote "origin"]
+        url = git@github.com:company/webapp.git
+        fetch = +refs/heads/*:refs/remotes/origin/*
+
+  "/.git/HEAD":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: "ref: refs/heads/main"
+
+  "/config/database.yml":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      production:
+        adapter: mysql2
+        encoding: utf8mb4
+        database: production_db
+        username: db_admin
+        password: DbAdm1n_Secr3t!
+        host: db.internal.company.com
+        port: 3306
+
+  "/config/secrets.yml":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      production:
+        secret_key_base: 3b7cd727ee24e8444053437c36cc66c4a6e3e...
+        api_key: prod_api_key_xyz789
+        encryption_key: aes256_key_do_not_share
+
+  "/backup/db.sql":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      -- MySQL dump 10.13  Distrib 8.0.32
+      -- Database: webapp_prod
+      
+      CREATE TABLE `users` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `email` varchar(255) NOT NULL,
+        `password` varchar(255) NOT NULL,
+        `role` varchar(50) DEFAULT 'user',
+        PRIMARY KEY (`id`)
+      );
+      
+      INSERT INTO `users` VALUES 
+      (1,'admin@company.com','$2y$10$abcdef...','admin'),
+      (2,'john@company.com','$2y$10$xyz123...','user');
+
+  "/phpinfo.php":
+    status: 200
+    headers:
+      Content-Type: "text/html"
+    body: |
+      <!DOCTYPE html>
+      <html><head><title>phpinfo()</title></head>
+      <body>
+      <h1>PHP Version 7.4.3</h1>
+      <table>
+      <tr><td>System</td><td>Linux ubuntu 5.4.0-42-generic</td></tr>
+      <tr><td>Server API</td><td>Apache 2.0 Handler</td></tr>
+      <tr><td>DOCUMENT_ROOT</td><td>/var/www/html</td></tr>
+      </table>
+      <h2>Environment</h2>
+      <table>
+      <tr><td>DB_PASSWORD</td><td>Pr0d_P@ssw0rd_2024!</td></tr>
+      <tr><td>AWS_SECRET_ACCESS_KEY</td><td>wJalrXUtnFEMI...</td></tr>
+      </table>
+      </body></html>
+
+  "/server-status":
+    status: 200
+    headers:
+      Content-Type: "text/html"
+    body: |
+      <!DOCTYPE html>
+      <html><head><title>Apache Status</title></head>
+      <body><h1>Apache Server Status for localhost</h1>
+      <dl><dt>Server Version: Apache/2.4.41 (Ubuntu) PHP/7.4.3</dt>
+      <dt>Server Built: 2020-08-12T19:46:17</dt>
+      <dt>Current Time: Saturday, 07-Dec-2025 15:30:00 UTC</dt>
+      <dt>Server uptime: 45 days 12 hours 30 minutes</dt>
+      <dt>Total accesses: 1234567 - Total Traffic: 5.2 GB</dt></dl>
+      </body></html>
+
+  "/admin/":
+    status: 200
+    headers:
+      Content-Type: "text/html"
+    body: |
+      <!DOCTYPE html>
+      <html><head><title>Admin Panel</title></head>
+      <body>
+      <h1>Administration Panel</h1>
+      <form action="/admin/login" method="POST">
+      <input type="text" name="username" placeholder="Username">
+      <input type="password" name="password" placeholder="Password">
+      <button type="submit">Login</button>
+      </form>
+      <!-- TODO: Remove default creds: admin/admin123 -->
+      </body></html>
+
+  "/debug.log":
+    status: 200
+    headers:
+      Content-Type: "text/plain"
+    body: |
+      [2025-12-07 10:15:23] DEBUG: Database connection established
+      [2025-12-07 10:15:23] DEBUG: User admin logged in from 192.168.1.100
+      [2025-12-07 10:15:24] ERROR: Failed login attempt for user 'test' - IP: 10.0.0.5
+      [2025-12-07 10:15:25] DEBUG: SQL Query: SELECT * FROM users WHERE id=1
+      [2025-12-07 10:15:26] WARNING: Deprecated function mysql_connect() called
+      [2025-12-07 10:15:30] ERROR: PDOException: SQLSTATE[42000]: Access denied for user 'root'@'localhost'

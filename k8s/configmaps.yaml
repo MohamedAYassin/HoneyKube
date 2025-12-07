@@ -1,0 +1,249 @@
+---
+# Apache/PHP Vulnerable Fingerprint
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fingerprint-apache
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: fingerprint
+data:
+  fingerprint.yaml: |
+    name: apache-php-vulnerable
+    port: 8080
+    protocol: http
+    server_header: "Apache/2.4.41 (Ubuntu)"
+    version: "2.4.41"
+    os_hint: "Ubuntu 20.04 LTS"
+    banner: |
+      Apache/2.4.41 (Ubuntu) Server
+      PHP/7.4.3
+      OpenSSL/1.1.1f
+    
+    vuln_tags:
+      - sql_injection
+      - command_injection
+      - path_traversal
+      - file_upload
+      - lfi
+      - information_disclosure
+    
+    behavior_hints:
+      - "Display verbose PHP errors with file paths"
+      - "Show MySQL connection errors with credentials"
+      - "Allow directory listing on /uploads/"
+      - "Reflect user input in error messages"
+      - "Accept weak session cookies"
+      - "Expose .git directory"
+      - "Show phpinfo() at /info.php"
+    
+    default_responses:
+      "/":
+        status: 200
+        headers:
+          Content-Type: "text/html; charset=UTF-8"
+        body: |
+          <!DOCTYPE html>
+          <html>
+          <head><title>Welcome to Apache</title></head>
+          <body>
+          <h1>It works!</h1>
+          <p>Apache/2.4.41 (Ubuntu) Server at localhost</p>
+          </body>
+          </html>
+      
+      "/robots.txt":
+        status: 200
+        headers:
+          Content-Type: "text/plain"
+        body: |
+          User-agent: *
+          Disallow: /admin/
+          Disallow: /backup/
+          Disallow: /config/
+          Disallow: /uploads/private/
+---
+# WordPress Vulnerable Fingerprint
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fingerprint-wordpress
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: fingerprint
+data:
+  fingerprint.yaml: |
+    name: wordpress-vulnerable
+    port: 8000
+    protocol: http
+    server_header: "Apache/2.4.29 (Ubuntu)"
+    version: "5.4.2"
+    os_hint: "Ubuntu 18.04 LTS"
+    banner: |
+      WordPress 5.4.2
+      PHP/7.2.24
+      MySQL 5.7.31
+    
+    vuln_tags:
+      - wordpress_xmlrpc
+      - wordpress_enum
+      - plugin_vulnerability
+      - theme_vulnerability
+      - sql_injection
+      - file_upload
+      - authentication_bypass
+      - privilege_escalation
+    
+    behavior_hints:
+      - "Allow user enumeration via /?author=1"
+      - "Expose wp-config.php.bak if traversal attempted"
+      - "Show WordPress version in generator meta tag"
+      - "Enable XML-RPC pingback"
+      - "Allow plugin file editing"
+      - "Show database errors on malformed queries"
+      - "Accept default admin credentials (admin:admin123)"
+      - "Expose debug.log at /wp-content/debug.log"
+    
+    default_responses:
+      "/":
+        status: 200
+        headers:
+          Content-Type: "text/html; charset=UTF-8"
+          X-Powered-By: "PHP/7.2.24"
+        body: |
+          <!DOCTYPE html>
+          <html lang="en-US">
+          <head>
+          <meta charset="UTF-8">
+          <meta name="generator" content="WordPress 5.4.2">
+          <title>My WordPress Site</title>
+          </head>
+          <body>
+          <h1>Welcome to My Blog</h1>
+          </body>
+          </html>
+      
+      "/wp-login.php":
+        status: 200
+        headers:
+          Content-Type: "text/html; charset=UTF-8"
+        body: |
+          <!DOCTYPE html>
+          <html>
+          <head><title>Log In</title></head>
+          <body class="login">
+          <form name="loginform" action="/wp-login.php" method="post">
+          <label>Username</label><input type="text" name="log">
+          <label>Password</label><input type="password" name="pwd">
+          <input type="submit" value="Log In">
+          </form>
+          </body>
+          </html>
+      
+      "/xmlrpc.php":
+        status: 200
+        headers:
+          Content-Type: "text/xml; charset=UTF-8"
+        body: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <methodResponse>
+            <params>
+              <param>
+                <value><string>XML-RPC server accepts POST requests only.</string></value>
+              </param>
+            </params>
+          </methodResponse>
+---
+# Next.js Vulnerable Application Fingerprint (CVE-2025-55182 & CVE-2025-66478)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fingerprint-nextjs
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: fingerprint
+data:
+  fingerprint.yaml: |
+    name: nextjs-vulnerable
+    port: 3000
+    protocol: http
+    server_header: "Next.js"
+    version: "14.1.0"
+    os_hint: "Linux (Node.js 20.x)"
+    banner: |
+      Next.js 14.1.0
+      React 18.2.0
+      Node.js 20.10.0
+    
+    vuln_tags:
+      - rce
+      - react_server_components
+      - prototype_pollution
+      - CVE-2025-55182
+      - CVE-2025-66478
+      - nextjs_rce
+      - server_actions
+      - deserialization
+    
+    behavior_hints:
+      - "Accept Server Actions via POST with Next-Action header"
+      - "Process multipart form data for RSC payloads"
+      - "Return X-Action-Redirect header on successful actions"
+      - "Show detailed error messages with digest in response"
+      - "Expose _next/static paths with build manifests"
+      - "Return 500 with E{digest} format on malformed RSC requests"
+      - "Process __proto__ in deserialized objects"
+      - "Allow prototype chain manipulation in form data"
+    
+    default_responses:
+      "/":
+        status: 200
+        headers:
+          Content-Type: "text/html; charset=utf-8"
+          X-Powered-By: "Next.js"
+        body: |
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>My Next.js App</title>
+          <link rel="preload" href="/_next/static/chunks/main.js" as="script">
+          </head>
+          <body>
+          <div id="__next">
+          <h1>Welcome to Next.js!</h1>
+          </div>
+          <script src="/_next/static/chunks/main.js" defer></script>
+          </body>
+          </html>
+      
+      "/login":
+        status: 200
+        headers:
+          Content-Type: "text/html; charset=utf-8"
+          X-Powered-By: "Next.js"
+        body: |
+          <!DOCTYPE html>
+          <html lang="en">
+          <head><title>Login - Next.js App</title></head>
+          <body>
+          <div id="__next">
+          <form action="/api/auth/login" method="POST">
+          <input type="text" name="username" placeholder="Username">
+          <input type="password" name="password" placeholder="Password">
+          <button type="submit">Sign In</button>
+          </form>
+          </div>
+          </body>
+          </html>
+      
+      "/api/health":
+        status: 200
+        headers:
+          Content-Type: "application/json"
+        body: |
+          {"status":"ok","version":"14.1.0"}

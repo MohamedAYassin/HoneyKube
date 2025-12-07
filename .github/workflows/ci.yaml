@@ -1,0 +1,31 @@
+name: Build Verification
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Shared Base Image
+      run: docker build -f Dockerfile.shared -t honeykube/shared:latest .
+
+    - name: Build Port Listener
+      run: docker build -f services/port-listener/Dockerfile -t honeykube/port-listener:latest .
+
+    - name: Build Scanner Detector
+      run: docker build -f services/scanner-detector/Dockerfile -t honeykube/scanner-detector:latest .
+
+    - name: Build LLM Planner
+      run: docker build -f services/llm-planner/Dockerfile -t honeykube/llm-planner:latest .
+
+    - name: Build Artifact Sink
+      run: docker build -f services/artifact-sink/Dockerfile -t honeykube/artifact-sink:latest .

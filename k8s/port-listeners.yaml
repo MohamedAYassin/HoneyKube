@@ -1,0 +1,286 @@
+---
+# Port Listener - Apache Profile (Port 80/NodePort 30080)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: port-listener-apache
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: port-listener
+    honeykube.io/profile: apache
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: port-listener-apache
+  template:
+    metadata:
+      labels:
+        app: port-listener-apache
+        app.kubernetes.io/name: honeykube
+        app.kubernetes.io/component: port-listener
+        honeykube.io/profile: apache
+    spec:
+      containers:
+        - name: port-listener
+          image: honeykube/port-listener:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: LISTEN_PORT
+              value: "8080"
+            - name: FINGERPRINT_PATH
+              value: "/config/fingerprint.yaml"
+            - name: SCANNER_DETECTOR_URL
+              value: "http://scanner-detector:8081"
+            - name: LLM_PLANNER_URL
+              value: "http://llm-planner:8082"
+            - name: ARTIFACT_SINK_URL
+              value: "http://artifact-sink:8083"
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: LOG_LEVEL
+              value: "INFO"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: fingerprint
+              mountPath: /config
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: fingerprint
+          configMap:
+            name: fingerprint-apache
+---
+# Port Listener Apache Service (NodePort)
+apiVersion: v1
+kind: Service
+metadata:
+  name: port-listener-apache
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: port-listener
+    honeykube.io/profile: apache
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
+      name: http
+  selector:
+    app: port-listener-apache
+---
+# Port Listener - WordPress Profile (Port 8000/NodePort 30800)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: port-listener-wordpress
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: port-listener
+    honeykube.io/profile: wordpress
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: port-listener-wordpress
+  template:
+    metadata:
+      labels:
+        app: port-listener-wordpress
+        app.kubernetes.io/name: honeykube
+        app.kubernetes.io/component: port-listener
+        honeykube.io/profile: wordpress
+    spec:
+      containers:
+        - name: port-listener
+          image: honeykube/port-listener:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: LISTEN_PORT
+              value: "8000"
+            - name: FINGERPRINT_PATH
+              value: "/config/fingerprint.yaml"
+            - name: SCANNER_DETECTOR_URL
+              value: "http://scanner-detector:8081"
+            - name: LLM_PLANNER_URL
+              value: "http://llm-planner:8082"
+            - name: ARTIFACT_SINK_URL
+              value: "http://artifact-sink:8083"
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: LOG_LEVEL
+              value: "INFO"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: fingerprint
+              mountPath: /config
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: fingerprint
+          configMap:
+            name: fingerprint-wordpress
+---
+# Port Listener WordPress Service (NodePort)
+apiVersion: v1
+kind: Service
+metadata:
+  name: port-listener-wordpress
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: port-listener
+    honeykube.io/profile: wordpress
+spec:
+  type: NodePort
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30800
+      name: http
+  selector:
+    app: port-listener-wordpress
+---
+# Port Listener - Next.js Vulnerable Profile (Port 3000/NodePort 30300)
+# CVE-2025-55182 & CVE-2025-66478 - React Server Components RCE
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: port-listener-nextjs
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: port-listener
+    honeykube.io/profile: nextjs
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: port-listener-nextjs
+  template:
+    metadata:
+      labels:
+        app: port-listener-nextjs
+        app.kubernetes.io/name: honeykube
+        app.kubernetes.io/component: port-listener
+        honeykube.io/profile: nextjs
+    spec:
+      containers:
+        - name: port-listener
+          image: honeykube/port-listener:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: LISTEN_PORT
+              value: "3000"
+            - name: FINGERPRINT_PATH
+              value: "/config/fingerprint.yaml"
+            - name: SCANNER_DETECTOR_URL
+              value: "http://scanner-detector:8081"
+            - name: LLM_PLANNER_URL
+              value: "http://llm-planner:8082"
+            - name: ARTIFACT_SINK_URL
+              value: "http://artifact-sink:8083"
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: LOG_LEVEL
+              value: "INFO"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: fingerprint
+              mountPath: /config
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /_health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: fingerprint
+          configMap:
+            name: fingerprint-nextjs
+---
+# Port Listener Next.js Service (NodePort)
+apiVersion: v1
+kind: Service
+metadata:
+  name: port-listener-nextjs
+  namespace: honeykube
+  labels:
+    app.kubernetes.io/name: honeykube
+    app.kubernetes.io/component: port-listener
+    honeykube.io/profile: nextjs
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30300
+      name: http
+  selector:
+    app: port-listener-nextjs
